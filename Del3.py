@@ -32,6 +32,7 @@ pop_dens_x = np.array([[0, 0.25, 0.75, 1.25, 1.75, 2.25, 2.75, 3.25, 3.75, 4.25,
 poly_x = np.polyfit(pop_dens_x[0], pop_dens_x[1], deg=8)
 poly_y = np.polyfit(np.array([0, 0.25, 0.75, 1.25, 1.75, 2.0]), np.array([np.average(pop_dens[:,0]), np.average(pop_dens[:,1]), np.average(pop_dens[:,2]), np.average(pop_dens[:,3]), np.average(pop_dens[:,4]), np.average(pop_dens[:,5])]), deg=5)
 
+plt.figure('Distribution')
 fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
 X = np.arange(0, 4.51, 0.01)
 Y = np.arange(0, 2.01, 0.01)
@@ -54,15 +55,14 @@ ax.set_zlabel('%', rotation=0)
 ax.zaxis.set_major_formatter('{x:.02f}')
 # Add a color bar which maps values to colors.
 #fig.colorbar(surf, shrink=0.5, aspect=5)
-plt.show()
 
 d0 = np.array([[1],
-               [0],
+               [1.9],
                [3],
-               [1.5]])  # x1, y1, x2, y2
-bounds = np.array([[0, 4.5],
+               [0.5]])  # x1, y1, x2, y2
+bounds = np.array([[0.1, 4.4],
                    [0, 2.0],
-                   [0, 4.5],
+                   [0.1, 4.4],
                    [0, 2.0]])
 def objective(d):
     pos1 = np.array([d[0], d[1]])   # station 1, 2, 3
@@ -106,8 +106,6 @@ def objective(d):
         p_l = np.array([k, cs(k)])
         arc_length = arc_length + ((p_u[0]-p_l[0])**2 + (p_u[1]-p_l[1])**2)**0.5
     w_2 = 0.5
-    print(1)
-    plt.scatter(x_cs, y_cs)
     return w_1 * crit_1 + w_2*arc_length
 
 def nonlincon(d):
@@ -117,7 +115,7 @@ def nonlincon(d):
     pospier = np.array([4.5, 1.0])  # pier
 
     # Constraint 1 --> station 2 not before station 1 in x-direction
-    c0 = pos1[0] - pos2[0]
+    c0 = pos1[0] - pos2[0]+0.1
 
     # Constraint 2 --> turn radius not too sharp along line
     x_cs = np.array([poscent[0], pos1[0], pos2[0], pospier[0]])
@@ -133,11 +131,20 @@ cons = sp.optimize.NonlinearConstraint(nonlincon, np.array([-np.inf]), np.array(
 result = sp.optimize.minimize(fun=objective, x0=d0, bounds=bounds, constraints=cons)
 print(result)
 
-plt.figure
+x = result.x
+print(x)
+pos1 = np.array([x[0], x[1]])  # station 1, 2
+pos2 = np.array([x[2], x[3]])
+poscent = np.array([0, 1.0])  # centraal
+pospier = np.array([4.5, 1.0])
+x_cs = np.array([poscent[0], pos1[0], pos2[0], pospier[0]])
+y_cs = np.array([poscent[1], pos1[1], pos2[1], pospier[1]])
+cs = sp.interpolate.CubicSpline(x=x_cs, y=y_cs, bc_type=((1, 0.0), (2, 0.0)))
+plt.figure('Design')
 plt.plot(np.arange(0, 4.51, 0.01), cs(np.arange(0, 4.51, 0.01)))
 plt.plot(np.arange(0, 4.51, 0.01), abs((1+cs(np.arange(0, 4.51, 0.01), 1)**2)**1.5/cs(np.arange(0, 4.51, 0.01), 1)))
 plt.grid()
 plt.xlim([0, 4.5])
-plt.ylim([0, 10])
+plt.ylim([0, 2])
 plt.scatter(x_cs, y_cs)
 plt.show()
