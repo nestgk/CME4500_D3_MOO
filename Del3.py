@@ -34,24 +34,27 @@ poly_x = np.polyfit(pop_dens_x[0], pop_dens_x[1], deg=8)
 poly_y = np.polyfit(np.array([0, 0.25, 0.75, 1.25, 1.75, 2.0]), np.array([np.average(pop_dens[:,0]), np.average(pop_dens[:,1]), np.average(pop_dens[:,2]), np.average(pop_dens[:,3]), np.average(pop_dens[:,4]), np.average(pop_dens[:,5])]), deg=5)
 
 fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
-X = np.arange(0, 4.6, 0.01)
-Y = np.arange(0, 2.1, 0.01)
+X = np.arange(0, 4.51, 0.01)
+Y = np.arange(0, 2.01, 0.01)
 X, Y = np.meshgrid(X, Y)
 Z = (poly_x[0]*X**8 + poly_x[1]*X**7 + poly_x[2]*X**6 + poly_x[3]*X**5 + poly_x[4]*X**4 + poly_x[5]*X**3 + poly_x[6]*X**2 + poly_x[7]*X**1 + poly_x[8]*X**0) *\
-    (poly_y[0]*Y**5 +  poly_y[1]*Y**4 +poly_y[2]*Y**3 +poly_y[3]*Y**2 +poly_y[4]*Y**1 + poly_y[5]*Y**0)/100/100
+    (poly_y[0]*Y**5 +  poly_y[1]*Y**4 +poly_y[2]*Y**3 +poly_y[3]*Y**2 +poly_y[4]*Y**1 + poly_y[5]*Y**0)/100
 # Plot the surface.
 surf = ax.plot_surface(X, Y, Z, cmap=cm.coolwarm,
                        linewidth=0, antialiased=False)
 # Customize the z axis.
 ax.zaxis.set_major_locator(LinearLocator(10))
-ax.set_box_aspect((np.ptp(X), np.ptp(Y), np.ptp(Z)))
-ax.set_zlim(0, 1)
-ax.set_zticks(np.arange(0, 1.2, 0.2))
+ax.set_box_aspect((np.ptp(X), np.ptp(Y), np.ptp(np.arange(0, 1.1, 0.1))))
+ax.set_zlim(0, 100)
+ax.set_zticks(np.arange(0, 100.1, 50))
+ax.set_xlabel('X [km]', rotation=0)
+ax.set_ylabel('Y [km]', rotation=0)
+ax.set_zlabel('%', rotation=0)
 
 # A StrMethodFormatter is used automatically
 ax.zaxis.set_major_formatter('{x:.02f}')
 # Add a color bar which maps values to colors.
-fig.colorbar(surf, shrink=0.5, aspect=5)
+#fig.colorbar(surf, shrink=0.5, aspect=5)
 plt.show()
 
 d0 = np.array([[1],
