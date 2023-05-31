@@ -6,7 +6,7 @@ from matplotlib import cm
 from matplotlib.ticker import LinearLocator
 
 # fields
-surface_data = np.array([[ 0, 0, 0]])
+surface_data = np.array([[0, 0, 0]])
 grid_x = np.array([0, 0.25, 0.75, 1.25, 1.75, 2.25, 2.75, 3.25, 3.75, 4.25, 4.5])
 grid_y = np.array([0, 0.25, 0.75, 1.25, 1.75, 2.0])
 pop_dens = np.array([[100, 100, 100, 100, 100, 100],
@@ -31,14 +31,17 @@ pop_dens_x = np.array([[0, 0.25, 0.75, 1.25, 1.75, 2.25, 2.75, 3.25, 3.75, 4.25,
                     [100, 75, 75, np.average([100, 100, 75, 50]), np.average([100, 100, 75, 50]), np.average([0, 0, 50, 100]), np.average([0, 25, 50, 25]), np.average([30, 20, 0, 100]), np.average([100, 25, 100, 50]), np.average([100, 100, 100, 0]), 0]])
 poly_x = np.polyfit(pop_dens_x[0], pop_dens_x[1], deg=8)
 poly_y = np.polyfit(np.array([0, 0.25, 0.75, 1.25, 1.75, 2.0]), np.array([np.average(pop_dens[:,0]), np.average(pop_dens[:,1]), np.average(pop_dens[:,2]), np.average(pop_dens[:,3]), np.average(pop_dens[:,4]), np.average(pop_dens[:,5])]), deg=5)
-
+poly_y = [1/384, 0, -1/8, 0, 1]  #Taylor expansion of z = cos(y/2)
 plt.figure('Distribution')
 fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
 X = np.arange(0, 4.51, 0.01)
 Y = np.arange(0, 2.01, 0.01)
 X, Y = np.meshgrid(X, Y)
+#Z = (poly_x[0]*X**8 + poly_x[1]*X**7 + poly_x[2]*X**6 + poly_x[3]*X**5 + poly_x[4]*X**4 + poly_x[5]*X**3 + poly_x[6]*X**2 + poly_x[7]*X**1 + poly_x[8]*X**0) *\
+#    (poly_y[0]*Y**5 +  poly_y[1]*Y**4 +poly_y[2]*Y**3 +poly_y[3]*Y**2 +poly_y[4]*Y**1 + poly_y[5]*Y**0)/100
 Z = (poly_x[0]*X**8 + poly_x[1]*X**7 + poly_x[2]*X**6 + poly_x[3]*X**5 + poly_x[4]*X**4 + poly_x[5]*X**3 + poly_x[6]*X**2 + poly_x[7]*X**1 + poly_x[8]*X**0) *\
-    (poly_y[0]*Y**5 +  poly_y[1]*Y**4 +poly_y[2]*Y**3 +poly_y[3]*Y**2 +poly_y[4]*Y**1 + poly_y[5]*Y**0)/100
+    (poly_y[0]*Y**4 + poly_y[1]*Y**3 + poly_y[2]*Y**2 + poly_y[3]*Y**1 + poly_y[4]*Y**0)
+
 # Plot the surface.
 surf = ax.plot_surface(X, Y, Z, cmap=cm.coolwarm,
                        linewidth=0, antialiased=False)
@@ -97,7 +100,7 @@ def objective(d):
 
     x_cs = np.array([poscent[0], pos1[0], pos2[0], pospier[0]])
     y_cs = np.array([poscent[1], pos1[1], pos2[1], pospier[1]])
-    cs = sp.interpolate.CubicSpline(x=x_cs, y=y_cs, bc_type=((1, 0.0), (2, 0.0)))
+    cs = sp.interpolate.CubicSpline(x=x_cs, y=y_cs, bc_type=((1, 0.5), (2, 0.0)))
     step = int(0.01)
     arc_length = 0
     for k in range(0, 450, 1):
@@ -120,10 +123,18 @@ def nonlincon(d):
     # Constraint 2 --> turn radius not too sharp along line
     x_cs = np.array([poscent[0], pos1[0], pos2[0], pospier[0]])
     y_cs = np.array([poscent[1], pos1[1], pos2[1], pospier[1]])
-    cs = sp.interpolate.CubicSpline(x=x_cs, y=y_cs, bc_type=((1, 0.0), (2, 0.0)))
-    #R_min = min(abs((1+cs(np.arange(0, 4.51, 0.01), 1)**2)**1.5/max((0.0001, abs(cs(np.arange(0, 4.51, 0.01), 1))))))
-    #c1 = 2 - R_min
-    return np.array([c0])#, c1])
+    cs = sp.interpolate.CubicSpline(x=x_cs, y=y_cs, bc_type=((1, 0.5), (2, 0.0)))
+    Radius_list = np.array([0])
+    for i in range(0, 451, 1):
+        i = i/100
+        curvature1 = max((0.0001, abs(cs(i, 2))))
+        curvature2 = (1+cs(i, 1)**2)**1.5
+        Radius = abs(curvature2/curvature1)
+        Radius_list = np.append(Radius_list, Radius)
+    Radius_list = Radius_list[1:]
+    R_min = min(Radius_list)
+    c1 = 2 - R_min
+    return np.array([c0, c1])
 
 cons = sp.optimize.NonlinearConstraint(nonlincon, np.array([-np.inf]), np.array([0]))
 
@@ -139,7 +150,7 @@ poscent = np.array([0, 1.0])  # centraal
 pospier = np.array([4.5, 1.0])
 x_cs = np.array([poscent[0], pos1[0], pos2[0], pospier[0]])
 y_cs = np.array([poscent[1], pos1[1], pos2[1], pospier[1]])
-cs = sp.interpolate.CubicSpline(x=x_cs, y=y_cs, bc_type=((1, 0.0), (2, 0.0)))
+cs = sp.interpolate.CubicSpline(x=x_cs, y=y_cs, bc_type=((1, 0.5), (2, 0.0)))
 plt.figure('Design')
 plt.plot(np.arange(0, 4.51, 0.01), cs(np.arange(0, 4.51, 0.01)))
 plt.plot(np.arange(0, 4.51, 0.01), abs((1+cs(np.arange(0, 4.51, 0.01), 1)**2)**1.5/cs(np.arange(0, 4.51, 0.01), 1)))
