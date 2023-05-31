@@ -5,7 +5,6 @@ import scipy.interpolate
 from matplotlib import cm
 from matplotlib.ticker import LinearLocator
 
-
 # fields
 surface_data = np.array([[ 0, 0, 0]])
 grid_x = np.array([0, 0.25, 0.75, 1.25, 1.75, 2.25, 2.75, 3.25, 3.75, 4.25, 4.5])
@@ -58,7 +57,7 @@ ax.zaxis.set_major_formatter('{x:.02f}')
 plt.show()
 
 d0 = np.array([[1],
-               [1],
+               [0],
                [3],
                [1.5]])  # x1, y1, x2, y2
 bounds = np.array([[0, 4.5],
@@ -66,10 +65,10 @@ bounds = np.array([[0, 4.5],
                    [0, 4.5],
                    [0, 2.0]])
 def objective(d):
-    pos1 = d[0,:]   # station 1, 2, 3
-    pos2 = d[1,:]
-    poscent = np.array([[0, 1.0]])      # centraal
-    pospier = np.array([[4.5, 1.0]])    # pier
+    pos1 = np.array([d[0], d[1]])   # station 1, 2, 3
+    pos2 = np.array([d[2], d[3]])
+    poscent = np.array([0, 1.0])      # centraal
+    pospier = np.array([4.5, 1.0])    # pier
 
     # Objective 1:
     # Find the average distance to stations --> minimize for accessibility
@@ -95,8 +94,50 @@ def objective(d):
 
     # Objective 2:
     # Minimize length of line to save cost
-    #scipy.interpolate.CubicSpline()
 
-    return w_1 * crit_1
+    x_cs = np.array([poscent[0], pos1[0], pos2[0], pospier[0]])
+    y_cs = np.array([poscent[1], pos1[1], pos2[1], pospier[1]])
+    cs = sp.interpolate.CubicSpline(x=x_cs, y=y_cs, bc_type=((1, 0.0), (2, 0.0)))
+    step = int(0.01)
+    arc_length = 0
+    for k in range(0, 450, 1):
+        k = k/100
+        p_u = np.array([k+0.01, cs(k+0.01)])
+        p_l = np.array([k, cs(k)])
+        arc_length = arc_length + ((p_u[0]-p_l[0])**2 + (p_u[1]-p_l[1])**2)**0.5
+    w_2 = 0.5
+    print(1)
+    plt.scatter(x_cs, y_cs)
+    return w_1 * crit_1 + w_2*arc_length
+
+def nonlincon(d):
+    pos1 = np.array([d[0], d[1]])  # station 1, 2, 3
+    pos2 = np.array([d[2], d[3]])
+    poscent = np.array([0, 1.0])  # centraal
+    pospier = np.array([4.5, 1.0])  # pier
+
+    # Constraint 1 --> station 2 not before station 1 in x-direction
+    c0 = pos1[0] - pos2[0]
+
+    # Constraint 2 --> turn radius not too sharp along line
+    x_cs = np.array([poscent[0], pos1[0], pos2[0], pospier[0]])
+    y_cs = np.array([poscent[1], pos1[1], pos2[1], pospier[1]])
+    cs = sp.interpolate.CubicSpline(x=x_cs, y=y_cs, bc_type=((1, 0.0), (2, 0.0)))
+    #R_min = min(abs((1+cs(np.arange(0, 4.51, 0.01), 1)**2)**1.5/max((0.0001, abs(cs(np.arange(0, 4.51, 0.01), 1))))))
+    #c1 = 2 - R_min
+    return np.array([c0])#, c1])
+
+cons = sp.optimize.NonlinearConstraint(nonlincon, np.array([-np.inf]), np.array([0]))
 
 
+result = sp.optimize.minimize(fun=objective, x0=d0, bounds=bounds, constraints=cons)
+print(result)
+
+plt.figure
+plt.plot(np.arange(0, 4.51, 0.01), cs(np.arange(0, 4.51, 0.01)))
+plt.plot(np.arange(0, 4.51, 0.01), abs((1+cs(np.arange(0, 4.51, 0.01), 1)**2)**1.5/cs(np.arange(0, 4.51, 0.01), 1)))
+plt.grid()
+plt.xlim([0, 4.5])
+plt.ylim([0, 10])
+plt.scatter(x_cs, y_cs)
+plt.show()
