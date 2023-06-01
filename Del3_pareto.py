@@ -151,7 +151,6 @@ def objective(d):
     if pos2[0]==4.5:
         pos2[0]=4.49
     x_cs = np.array([poscent[0], pos1[0], pos2[0], pospier[0]])
-    print(x_cs)
     y_cs = np.array([poscent[1], pos1[1], pos2[1], pospier[1]])
     cs = sp.interpolate.CubicSpline(x=x_cs, y=y_cs, bc_type=((1, 0.5), (2, 0.0)))
     step = int(0.01)
@@ -191,7 +190,7 @@ def nonlincon(d):
         Radius_list = np.append(Radius_list, Radius)
     Radius_list = Radius_list[1:]
     R_min = min(Radius_list)
-    c1 = 2 - R_min
+    c1 = 0.7 - R_min
     return np.array([c0, c1])
 
 cons = sp.optimize.NonlinearConstraint(nonlincon, np.array([-np.inf]), np.array([0]))
@@ -226,7 +225,7 @@ def objective_sep(d):
     dist_1 = ((pos1[0]-x_avg_1)**2+(pos1[1]-y_avg_1)**2)**0.5
     dist_2 = ((pos2[0]-x_avg_2)**2+(pos2[1]-y_avg_2)**2)**0.5
     crit_1 = dist_1 + dist_2
-    crit_1 = crit_1/crit_1_0
+    crit_1 = crit_1/0.645406598264402
 
 
     # Objective 2:
@@ -246,12 +245,12 @@ def objective_sep(d):
         p_l = np.array([k, cs(k)])
         arc_length = arc_length + ((p_u[0]-p_l[0])**2 + (p_u[1]-p_l[1])**2)**0.5
     w_2 = 1-w_1
-    arc_length = arc_length/crit_2_0
+    arc_length = arc_length/4.561854657552379
     return crit_1, arc_length
 
 
-for w_1 in range(0, 101, 1):
-    w_1 = w_1/100
+for w_1 in range(1, 10, 2):
+    w_1 = w_1/10
     result = sp.optimize.minimize(fun=objective, x0=d0, bounds=bounds, constraints=cons)
     x_list = np.concatenate((x_list, np.array([result.x])), axis=0)
     crit_1, arc_length = objective_sep(result.x)
