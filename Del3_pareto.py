@@ -142,7 +142,7 @@ def objective(d):
     dist_1 = ((pos1[0]-x_avg_1)**2+(pos1[1]-y_avg_1)**2)**0.5
     dist_2 = ((pos2[0]-x_avg_2)**2+(pos2[1]-y_avg_2)**2)**0.5
     crit_1 = dist_1 + dist_2
-    crit_1 = crit_1/crit_1_0
+    crit_1 = crit_1/0.8607599268196946
 
     # Objective 2:
     # Minimize length of line to save cost
@@ -161,7 +161,7 @@ def objective(d):
         p_l = np.array([k, cs(k)])
         arc_length = arc_length + ((p_u[0]-p_l[0])**2 + (p_u[1]-p_l[1])**2)**0.5
     w_2 = 1-w_1
-    arc_length = arc_length/crit_2_0
+    arc_length = arc_length/4.550755288379701
     return w_1 * crit_1 + w_2*arc_length
 
 def nonlincon(d):
@@ -225,7 +225,7 @@ def objective_sep(d):
     dist_1 = ((pos1[0]-x_avg_1)**2+(pos1[1]-y_avg_1)**2)**0.5
     dist_2 = ((pos2[0]-x_avg_2)**2+(pos2[1]-y_avg_2)**2)**0.5
     crit_1 = dist_1 + dist_2
-    crit_1 = crit_1/0.645406598264402
+    crit_1 = crit_1/0.8607599268196946
 
 
     # Objective 2:
@@ -245,7 +245,7 @@ def objective_sep(d):
         p_l = np.array([k, cs(k)])
         arc_length = arc_length + ((p_u[0]-p_l[0])**2 + (p_u[1]-p_l[1])**2)**0.5
     w_2 = 1-w_1
-    arc_length = arc_length/4.561854657552379
+    arc_length = arc_length/4.550755288379701
     return crit_1, arc_length
 
 
