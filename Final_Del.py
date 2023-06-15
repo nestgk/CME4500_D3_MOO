@@ -25,14 +25,13 @@ for i in range(0, len(pop_dens[:])):
         surface_data_point = np.array([[grid_x[i], grid_y[j], pop_dens[i, j]]])
         surface_data=np.concatenate([surface_data, surface_data_point])
 surface_data = surface_data[1:, :]
-print(surface_data)
 
 pop_dens_x = np.array([[0, 0.25, 0.75, 1.25, 1.75, 2.25, 2.75, 3.25, 3.75, 4.25, 4.5],
                     [100, 75, 75, np.average([100, 100, 75, 50]), np.average([100, 100, 75, 50]), np.average([0, 0, 50, 100]), np.average([0, 25, 50, 25]), np.average([30, 20, 0, 100]), np.average([100, 25, 100, 50]), np.average([100, 100, 100, 0]), 0]])
 poly_x = np.polyfit(pop_dens_x[0], pop_dens_x[1], deg=8)
 poly_y = np.polyfit(np.array([0, 0.25, 0.75, 1.25, 1.75, 2.0]), np.array([np.average(pop_dens[:,0]), np.average(pop_dens[:,1]), np.average(pop_dens[:,2]), np.average(pop_dens[:,3]), np.average(pop_dens[:,4]), np.average(pop_dens[:,5])]), deg=5)
 poly_y = [1/384, 0, -1/8, 0, 1]  #Taylor expansion of z = cos(y/2)
-plt.figure('Distribution')
+#plt.figure('Distribution')
 fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
 X = np.arange(0, 4.51, 0.01)
 Y = np.arange(0, 2.01, 0.01)
@@ -73,30 +72,30 @@ def position(lower, upper):
 ### Begin the optimization ###
 
 d0 = np.array([[1],
-               [1],
-               [1.9],
+               [1.],
+               [1.8],
                [0],
-               [3],
+               [3.],
                [0.5],
                [1],
                [3.2],
                [1.9],
                [0],
                [4.2],
-               [1]])  # (ON/OFF)1, x1, y1, (ON/OFF)2, x2, y2, (ON/OFF)3, x3, y3, (ON/OFF)4, x4, y4
+               [1.]])  # (ON/OFF)1, x1, y1, (ON/OFF)2, x2, y2, (ON/OFF)3, x3, y3, (ON/OFF)4, x4, y4
 
 bounds = np.array([[0, 1],
                    [0.01, 4.49],
-                   [0, 2.0],
+                   [0., 2.0],
                    [0, 1],
                    [0.01, 4.49],
-                   [0, 2.0],
+                   [0., 2.0],
                    [0, 1],
                    [0.01, 4.49],
-                   [0, 2.0],
+                   [0., 2.0],
                    [0, 1],
                    [0.01, 4.49],
-                   [0, 2.0]])
+                   [0., 2.0]])
 
 def objective(d):
     # Positions of all stations
@@ -135,7 +134,7 @@ def objective(d):
     crit_1 = crit_1 + dist_pier
 
     w_1 = 1
-    print(crit_1)
+    #print(crit_1)
 
     # Obj. 2
     # maximize the included population
@@ -174,46 +173,55 @@ def nonlincon(d):
     int_bnds = (stations[1:, 0] + stations[:-1, 0]) / 2
 
     # Constraint 1-3 --> stations consecutive in x-direction, regardless of active or not
-    c0 = d[1] - d[3]
-    c1 = d[3] - d[5]
-    c2 = d[5] - d[7]
+    c0 = d[1] - d[4]
+    c1 = d[4] - d[7]
+    c2 = d[7] - d[10]
 
     # Constraint 4 --> maximum walking time constraint
     # maximum walking time to closest  station is corner point of integral domain to station
     walk_dist_list = []
     walk_dist_cent = int_bnds[0] + 1
-    walk_dist_list = walk_dist_list + walk_dist_cent
-    for i in range(1, len(stations[:, 0])):
-        walk_dist = max(abs(stations[i, 0]-int_bnds[i-1]), abs(int_bnds[i]-stations[i, 0])) \
-                    + abs(stations[i, 1]-1) + 1
-        walk_dist_list = walk_dist_list + walk_dist
-    walk_dist_pier = int_bnds[-1] + 1
-    walk_dist_list = walk_dist_list + walk_dist_pier
+    walk_dist_list.append(walk_dist_cent)
+    for i in range(1, len(stations[:, 0])-1):
+        walk_dist = max(abs(stations[i, 0]-int_bnds[i-1]), abs(int_bnds[i]-stations[i, 0])) + abs(stations[i, 1]-1) + 1
+        walk_dist_list.append(walk_dist)
+    walk_dist_pier = (4.5 - int_bnds[-1]) + 1
+    walk_dist_list.append(walk_dist_pier)
     max_walk_dist = max(walk_dist_list)
-    time_to_travel = max_walk_dist/5        # 5 mins per km --> slow cycling
-    c3 = time_to_travel-12                  # 12 mins max
+    time_to_travel = max_walk_dist*5   # 5 mins per km --> slow cycling
+    #print(stations, '???')
+    #print(walk_dist_list, '+++')
+    #print(max_walk_dist, '---')
+    #print(time_to_travel, 'ooo')
+    c3 = time_to_travel-10                  # 10 mins max cycling
 
     # Constraint 5 --> turn radius not too sharp along line
-    x_cs = np.array([stations[:, 0]])
-    y_cs = np.array([stations[:, 1]])
-    cs = sp.interpolate.CubicSpline(x=x_cs, y=y_cs, bc_type=((1, 0.5), (2, 0.0)))
-    Radius_list = np.array([0])
-    for i in range(0, 451, 1):
-        i = i/100
-        curvature1 = max((0.0001, abs(cs(i, 2))))
-        curvature2 = (1+cs(i, 1)**2)**1.5
-        Radius = abs(curvature2/curvature1)
-        Radius_list = np.append(Radius_list, Radius)
-    Radius_list = Radius_list[1:]
-    R_min = min(Radius_list)
-    c4 = 0.7 - R_min
+    x_cs = np.array(stations[:, 0].tolist())
+    y_cs = np.array(stations[:, 1].tolist())
+    #print(x_cs)
+    if c0<0 and c1<0 and c2<0:
+        #print(c0,'////',c1,'////',c2,'////')
+        #print(np.transpose(d))
+        cs = sp.interpolate.CubicSpline(x=x_cs, y=y_cs, bc_type=((1, 0.5), (2, 0.0)))
+        Radius_list = np.array([0])
+        for i in range(0, 451, 1):
+            i = i / 100
+            curvature1 = max((0.0001, abs(cs(i, 2))))
+            curvature2 = (1 + cs(i, 1) ** 2) ** 1.5
+            Radius = abs(curvature2 / curvature1)
+            Radius_list = np.append(Radius_list, Radius)
+        Radius_list = Radius_list[1:]
+        R_min = min(Radius_list)
+        c4 = 0.7 - R_min
+    else:
+        c4 = 100
     return np.array([c0, c1, c2, c3, c4])
 
 cons = sp.optimize.NonlinearConstraint(nonlincon, np.array([-np.inf, -np.inf, -np.inf, -np.inf, -np.inf]), np.array([0, 0, 0, 0, 0]))
 integers = np.array([True, False, False, True, False, False, True, False, False, True, False, False])
 
-result = sp.optimize.differential_evolution(func=objective, bounds=bounds, maxiter=100, constraints=cons,
-                                                 tol=0.01, integrality=integers)
+result = sp.optimize.differential_evolution(func=objective, bounds=bounds, maxiter=200, constraints=cons,
+                                                 tol=0.1, integrality=integers)
 print(result)
 
 x = result.x
@@ -230,12 +238,8 @@ for i in range(0, 10, 3):
 
 stations = np.vstack((stations, pospier))
 
-'''pos1 = np.array([x[0], x[1]])  # station 1, 2
-pos2 = np.array([x[2], x[3]])
-poscent = np.array([0, 1.0])  # centraal
-pospier = np.array([4.5, 1.0])
-x_cs = np.array([poscent[0], pos1[0], pos2[0], pospier[0]])
-y_cs = np.array([poscent[1], pos1[1], pos2[1], pospier[1]])
+x_cs = np.array(stations[:, 0].tolist())
+y_cs = np.array(stations[:, 1].tolist())
 cs = sp.interpolate.CubicSpline(x=x_cs, y=y_cs, bc_type=((1, 0.5), (2, 0.0)))
 plt.figure('Design')
 plt.plot(np.arange(0, 4.51, 0.01), cs(np.arange(0, 4.51, 0.01)))
@@ -244,4 +248,4 @@ plt.grid()
 plt.xlim([0, 4.5])
 plt.ylim([0, 2])
 plt.scatter(x_cs, y_cs)
-plt.show()'''
+plt.show()
